@@ -1,113 +1,48 @@
-# ☁️ AWS Cloud Architecture – Scalable Digital Media Platform
+# 📦 Logistics Optimisation Algorithm – Python
 
-A production-ready **AWS cloud infrastructure** design for a scalable digital media platform — built with security, availability and cost efficiency as core requirements from day one.
+A constraint-based **Python optimisation algorithm** that solves the van loading problem — maximising delivery efficiency by intelligently packing items based on weight distribution, stacking rules and retrieval order.
 
 ---
 
 ## 📌 What It Does
 
-This project designs and documents a full AWS infrastructure capable of hosting a digital media platform at scale, including:
+Manual van loading is error-prone and inefficient. This algorithm automates the decision-making by:
 
-- Serving and storing media files reliably to large numbers of concurrent users
-- Securing access at every layer using IAM and network controls
-- Monitoring system health and performance in real time via CloudWatch
-- Controlling and optimising cloud spend with AWS Cost Explorer
-- Surviving availability zone failures without downtime
+- Evaluating which items can be stacked based on weight and fragility constraints
+- Distributing load evenly across the van to maintain safe weight balance
+- Ordering items so the last delivery is loaded last (LIFO — Last In, First Out)
+- Flagging constraint violations before a route begins
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Service | Purpose |
+| Layer | Technology |
 |---|---|
-| **Amazon EC2** | Compute — application and web servers |
-| **Amazon S3** | Object storage — media file storage and delivery |
-| **Amazon VPC** | Network — isolated, segmented cloud environment |
-| **AWS IAM** | Identity — least-privilege access control |
-| **Amazon CloudWatch** | Observability — metrics, alarms and logging |
-| **AWS Cost Explorer** | FinOps — spend tracking and optimisation |
-| **Elastic Load Balancer** | Traffic distribution across availability zones |
-| **Auto Scaling Group** | Dynamic compute scaling under load |
+| Language | Python 3 |
+| Algorithm | Constraint-based optimisation |
+| Data Format | JSON / CSV input |
+| Testing | Python unittest |
 
 ---
 
-## 🏗️ Architecture Overview
+## 🧠 How the Algorithm Works
+
+The problem is modelled as a **constraint satisfaction problem (CSP)**:
 
 ```
-                        Internet
-                           │
-                    ┌──────▼──────┐
-                    │  CloudFront  │  ← CDN / edge caching
-                    └──────┬──────┘
-                           │
-                    ┌──────▼──────┐
-                    │     ELB     │  ← Load balancer (public subnet)
-                    └──────┬──────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-   ┌──────▼──────┐  ┌──────▼──────┐        │
-   │  EC2 (AZ-1) │  │  EC2 (AZ-2) │        │  ← Auto Scaling Group
-   └──────┬──────┘  └──────┬──────┘        │    (private subnets)
-          │                │               ─┘
-          └────────┬───────┘
-                   │
-            ┌──────▼──────┐
-            │   Amazon S3  │  ← Media storage (private, bucket policy)
-            └─────────────┘
+Input: List of items (weight, dimensions, fragility, delivery stop)
+         └── Constraints: max weight, stack rules, balance threshold
 
-   CloudWatch ──── monitors all layers ────▶ Alarms & Dashboards
-   IAM        ──── controls all access ────▶ Roles, Policies, MFA
-   Cost Explorer ─ tracks all spend ──────▶ Budgets & Alerts
+Algorithm:
+  1. Sort items by delivery stop (reverse order — last stop loads first)
+  2. Apply stacking rules (fragile items on top, heavy items on base)
+  3. Check cumulative weight against van capacity
+  4. Validate left/right balance distribution
+  5. Output: ordered loading plan + constraint report
+
+Output: Optimised loading sequence + any violations flagged
 ```
-
----
-
-## 🔐 Security Design
-
-Security is applied at every layer — not bolted on at the end.
-
-**Network segmentation:**
-- Public subnets: load balancer only
-- Private subnets: EC2 instances — no direct internet access
-- S3 bucket: no public read; accessed via IAM roles only
-
-**IAM (Identity & Access Management):**
-- Least-privilege principle throughout — every role has only the permissions it needs
-- EC2 instances use instance profiles — no access keys stored on servers
-- MFA enforced for all console access
-- S3 bucket policies restrict access to authorised roles only
-
-**In transit & at rest:**
-- HTTPS enforced at the load balancer (ACM certificate)
-- S3 server-side encryption enabled (SSE-S3)
-- CloudWatch log data encrypted
-
----
-
-## 📊 Observability
-
-CloudWatch is configured to monitor:
-
-| Metric | Alarm Threshold |
-|---|---|
-| EC2 CPU Utilisation | > 80% for 5 mins → scale out |
-| ELB 5XX Error Rate | > 1% → alert |
-| S3 Request Errors | > 0.5% → alert |
-| Estimated Charges | > budget threshold → alert |
-
-All alarms route to SNS for email/SMS notification.
-
----
-
-## 💰 Cost Optimisation
-
-AWS Cost Explorer was used throughout to:
-
-- Identify the most cost-effective EC2 instance types for the expected workload
-- Set budget alerts to prevent unexpected spend
-- Analyse S3 storage class options (Standard vs Infrequent Access)
-- Model reserved instance savings vs on-demand pricing
 
 ---
 
@@ -115,23 +50,42 @@ AWS Cost Explorer was used throughout to:
 
 ### Prerequisites
 
-- AWS account with appropriate IAM permissions
-- AWS CLI installed and configured (`aws configure`)
-- Terraform installed (if deploying via IaC)
+- Python 3.8+
+- No external libraries required (pure Python)
 
-### Deploying the Infrastructure
+### Installation
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/aws-cloud-architecture.git
-cd aws-cloud-architecture
+git clone https://github.com/YOUR-USERNAME/logistics-optimisation.git
+cd logistics-optimisation
+```
 
-# Review and update variables
-cp terraform.tfvars.example terraform.tfvars
+### Usage
 
-# Initialise and deploy
-terraform init
-terraform plan
-terraform apply
+**1. Define your items in `items.json`:**
+```json
+[
+  { "id": "PKG001", "weight_kg": 12, "fragile": false, "stop": 3 },
+  { "id": "PKG002", "weight_kg": 4,  "fragile": true,  "stop": 1 },
+  { "id": "PKG003", "weight_kg": 8,  "fragile": false, "stop": 2 }
+]
+```
+
+**2. Run the optimiser:**
+```bash
+python optimise.py --input items.json --capacity 500
+```
+
+**3. View the loading plan:**
+```
+Loading Plan (load in this order):
+  1. PKG001 — 12kg — Stop 3  [BASE]
+  2. PKG003 — 8kg  — Stop 2  [MID]
+  3. PKG002 — 4kg  — Stop 1  [TOP — fragile]
+
+Total weight: 24kg / 500kg capacity
+Balance: OK
+Constraint violations: None
 ```
 
 ---
@@ -139,37 +93,53 @@ terraform apply
 ## 📂 Project Structure
 
 ```
-aws-cloud-architecture/
+logistics-optimisation/
 │
-├── architecture/
-│   └── diagram.png         # Full architecture diagram
-├── terraform/
-│   ├── main.tf             # Core infrastructure definition
-│   ├── vpc.tf              # VPC, subnets, routing
-│   ├── ec2.tf              # Compute and auto scaling
-│   ├── s3.tf               # Storage and bucket policies
-│   ├── iam.tf              # Roles, policies, instance profiles
-│   ├── cloudwatch.tf       # Metrics, alarms, dashboards
-│   └── variables.tf        # Configurable parameters
-├── terraform.tfvars.example
+├── optimise.py         # Main algorithm entry point
+├── constraints.py      # Constraint definitions and validation logic
+├── loader.py           # Item sorting and stacking logic
+├── items.json          # Sample input data
+├── tests/
+│   └── test_optimise.py  # Unit tests for constraint validation
 └── README.md
 ```
 
 ---
 
+## ✅ Constraints Modelled
+
+| Constraint | Rule |
+|---|---|
+| Max capacity | Total weight must not exceed van limit |
+| Stack safety | Fragile items always loaded on top |
+| Weight balance | Left/right distribution within ±15% threshold |
+| Retrieval order | Stop 1 items loaded last (LIFO) |
+| Base stability | Heaviest items always form the base layer |
+
+---
+
+## 🧪 Running Tests
+
+```bash
+python -m unittest tests/test_optimise.py -v
+```
+
+Tests cover constraint validation, edge cases (overloaded van, all-fragile loads, single-item input) and correct LIFO ordering.
+
+---
+
 ## 📈 Future Improvements
 
-- [ ] Add Amazon RDS (managed database) with Multi-AZ failover
-- [ ] Integrate AWS WAF for application-layer protection
-- [ ] Add CloudFront distribution for global media delivery
-- [ ] Implement S3 lifecycle policies to move old media to Glacier
-- [ ] Add VPC Flow Logs for network traffic auditing
+- [ ] Multi-van routing — assign items across a fleet optimally
+- [ ] GUI visualisation of the loading plan
+- [ ] Integration with Google Maps API for route-aware loading
+- [ ] Genetic algorithm approach for larger item sets
 
 ---
 
 ## 💡 Why This Project
 
-Designing infrastructure for a media platform means handling real trade-offs: availability vs cost, security vs convenience, flexibility vs simplicity. This project was built to practise making those decisions deliberately — choosing each service for a reason and documenting the thinking behind it.
+This was built to explore how software can solve real operational problems that businesses deal with every day. The goal was not just to write code, but to model a problem correctly from first principles — defining the constraints before writing a single line of solution logic.
 
 ---
 
